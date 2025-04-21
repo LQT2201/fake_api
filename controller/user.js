@@ -42,27 +42,62 @@ module.exports.addUser = (req, res) => {
         userCount = count;
       })
       .then(() => {
-        const user = new User({
+        // Create a new user with only the fields provided in the request
+        const userData = {
           id: userCount + 1,
           email: req.body.email,
           username: req.body.username,
           password: req.body.password,
-          name: {
-            firstname: req.body.firstname,
-            lastname: req.body.lastname,
-          },
-          address: {
-            city: req.body.address.city,
-            street: req.body.address.street,
-            number: req.body.number,
-            zipcode: req.body.zipcode,
-            geolocation: {
-              lat: req.body.address.geolocation.lat,
-              long: req.body.address.geolocation.long,
-            },
-          },
-          phone: req.body.phone,
-        });
+          name: {},
+          address: {},
+        };
+
+        // Add name fields if provided
+        if (req.body.firstname) userData.name.firstname = req.body.firstname;
+        if (req.body.lastname) userData.name.lastname = req.body.lastname;
+
+        // Add phone if provided
+        if (req.body.phone) userData.phone = req.body.phone;
+
+        // Add address fields if provided
+        if (req.body.address) {
+          if (req.body.address.city)
+            userData.address.city = req.body.address.city;
+          if (req.body.address.street)
+            userData.address.street = req.body.address.street;
+          if (req.body.address.number)
+            userData.address.number = req.body.address.number;
+          if (req.body.address.zipcode)
+            userData.address.zipcode = req.body.address.zipcode;
+
+          // Add geolocation if provided
+          if (req.body.address.geolocation) {
+            userData.address.geolocation = {};
+            if (req.body.address.geolocation.lat)
+              userData.address.geolocation.lat =
+                req.body.address.geolocation.lat;
+            if (req.body.address.geolocation.long)
+              userData.address.geolocation.long =
+                req.body.address.geolocation.long;
+          }
+        }
+
+        // Set default values for required fields
+        if (!userData.name.firstname) userData.name.firstname = "";
+        if (!userData.name.lastname) userData.name.lastname = "";
+        if (!userData.address.city) userData.address.city = "";
+        if (!userData.address.street) userData.address.street = "";
+        if (!userData.address.number) userData.address.number = 0;
+        if (!userData.address.zipcode) userData.address.zipcode = "";
+        if (!userData.address.geolocation) {
+          userData.address.geolocation = {
+            lat: "0",
+            long: "0",
+          };
+        }
+
+        const user = new User(userData);
+
         user
           .save()
           .then((user) => res.json(user))
