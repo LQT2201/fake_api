@@ -72,6 +72,10 @@ module.exports.addProduct = (req, res) => {
           description: req.body.description,
           image: req.body.image,
           category: req.body.category,
+          rating: {
+            rate: req.body.rating?.rate || 0,
+            count: req.body.rating?.count || 0,
+          },
         });
         product
           .save()
@@ -110,6 +114,10 @@ module.exports.editProduct = (req, res) => {
       description: req.body.description,
       image: req.body.image,
       category: req.body.category,
+      rating: {
+        rate: req.body.rating?.rate || 0,
+        count: req.body.rating?.count || 0,
+      },
     };
 
     Product.findOneAndUpdate({ id: id }, updateData, { new: true })
