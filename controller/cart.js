@@ -1,4 +1,6 @@
 const Cart = require("../model/cart");
+const Product = require("../model/product");
+const Order = require("../model/order");
 
 module.exports.getAllCarts = (req, res) => {
   const limit = Number(req.query.limit) || 0;
@@ -155,5 +157,89 @@ module.exports.deleteCart = (req, res) => {
           error: err.message,
         });
       });
+  }
+};
+
+module.exports.checkout = async (req, res) => {
+  try {
+    const cartId = parseInt(req.params.id);
+    const { shippingAddress, paymentMethod } = req.body;
+
+    // Find the cart
+    const cart = await Cart.findOne({ id: cartId }).select(
+      "-_id -products._id"
+    );
+
+    if (!cart) {
+      return res.status(404).json({
+        status: "error",
+        message: "Cart not found",
+      });
+    }
+
+    // Get detailed product information for each item in the cart
+    const detailedProducts = [];
+    let totalAmount = 0;
+
+    // Process each product in the cart
+    for (const item of cart.products) {
+      const product = await Product.findOne({ id: item.productId });
+
+      if (!product) {
+        return res.status(404).json({
+          status: "error",
+          message: `Product with ID ${item.productId} not found`,
+        });
+      }
+
+      const itemTotal = product.price * item.quantity;
+      totalAmount += itemTotal;
+
+      detailedProducts.push({
+        productId: item.productId,
+        quantity: item.quantity,
+        price: product.price,
+        title: product.title,
+        image: product.image,
+      });
+    }
+
+    // Count existing orders to generate a new ID
+    const orderCount = await Order.countDocuments();
+
+    // Create a new order
+    const order = new Order({
+      id: orderCount + 1,
+      userId: cart.userId,
+      cartId: cart.id,
+      products: detailedProducts,
+      totalAmount,
+      shippingAddress: shippingAddress || {
+        address: "Default Address",
+        city: "Default City",
+        postalCode: "12345",
+        country: "Default Country",
+      },
+      paymentMethod: paymentMethod || "Cash on Delivery",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    // Save the order
+    const savedOrder = await order.save();
+
+    // Respond with the created order
+    res.status(201).json({
+      status: "success",
+      message: "Order created successfully",
+      order: savedOrder,
+    });
+  } catch (error) {
+    console.error("Checkout error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Failed to process checkout",
+      error: error.message,
+    });
   }
 };

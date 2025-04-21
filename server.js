@@ -20,9 +20,16 @@ const homeRoute = require("./routes/home");
 const cartRoute = require("./routes/cart");
 const userRoute = require("./routes/user");
 const authRoute = require("./routes/auth");
+const orderRoute = require("./routes/order");
 
 //middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 app.use(express.static(path.join(__dirname, "/public")));
 app.use(express.urlencoded({ extended: true }));
@@ -39,6 +46,7 @@ app.use("/products", productRoute);
 app.use("/carts", cartRoute);
 app.use("/users", userRoute);
 app.use("/auth", authRoute);
+app.use("/orders", orderRoute);
 
 console.log(process.env.DATABASE_URL);
 

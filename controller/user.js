@@ -94,45 +94,136 @@ module.exports.editUser = (req, res) => {
     });
   } else {
     const id = parseInt(req.params.id);
-    const updateData = {
-      email: req.body.email,
-      username: req.body.username,
-      password: req.body.password,
-      name: {
-        firstname: req.body.firstname,
-        lastname: req.body.lastname,
-      },
-      address: {
-        city: req.body.address.city,
-        street: req.body.address.street,
-        number: req.body.number,
-        zipcode: req.body.zipcode,
-        geolocation: {
-          lat: req.body.address.geolocation.lat,
-          long: req.body.address.geolocation.long,
-        },
-      },
-      phone: req.body.phone,
-    };
 
-    User.findOneAndUpdate({ id: id }, updateData, { new: true })
-      .then((user) => {
-        if (!user) {
-          return res.status(404).json({
+    // Create an updateData object that only includes fields present in the request
+    const updateData = {};
+
+    // Handle simple fields
+    if (req.body.email !== undefined) updateData.email = req.body.email;
+    if (req.body.username !== undefined)
+      updateData.username = req.body.username;
+    if (req.body.password !== undefined)
+      updateData.password = req.body.password;
+    if (req.body.phone !== undefined) updateData.phone = req.body.phone;
+
+    // Handle nested name object
+    if (req.body.firstname !== undefined || req.body.lastname !== undefined) {
+      updateData.name = {};
+
+      // Get current user data to preserve existing values if not updated
+      User.findOne({ id })
+        .then((currentUser) => {
+          if (!currentUser) {
+            return res.status(404).json({
+              status: "error",
+              message: "User not found",
+            });
+          }
+
+          // Set name fields, using existing values if not provided
+          updateData.name.firstname =
+            req.body.firstname !== undefined
+              ? req.body.firstname
+              : currentUser.name.firstname;
+
+          updateData.name.lastname =
+            req.body.lastname !== undefined
+              ? req.body.lastname
+              : currentUser.name.lastname;
+
+          // Handle address fields if provided
+          if (req.body.address) {
+            updateData.address = {};
+
+            // Use existing values for fields not specified in the request
+            if (req.body.address.city !== undefined)
+              updateData.address.city = req.body.address.city;
+            else if (currentUser.address)
+              updateData.address.city = currentUser.address.city;
+
+            if (req.body.address.street !== undefined)
+              updateData.address.street = req.body.address.street;
+            else if (currentUser.address)
+              updateData.address.street = currentUser.address.street;
+
+            if (req.body.address.number !== undefined)
+              updateData.address.number = req.body.address.number;
+            else if (currentUser.address)
+              updateData.address.number = currentUser.address.number;
+
+            if (req.body.address.zipcode !== undefined)
+              updateData.address.zipcode = req.body.address.zipcode;
+            else if (currentUser.address)
+              updateData.address.zipcode = currentUser.address.zipcode;
+
+            // Handle geolocation if provided
+            if (req.body.address.geolocation) {
+              updateData.address.geolocation = {};
+
+              if (req.body.address.geolocation.lat !== undefined)
+                updateData.address.geolocation.lat =
+                  req.body.address.geolocation.lat;
+              else if (currentUser.address && currentUser.address.geolocation)
+                updateData.address.geolocation.lat =
+                  currentUser.address.geolocation.lat;
+
+              if (req.body.address.geolocation.long !== undefined)
+                updateData.address.geolocation.long =
+                  req.body.address.geolocation.long;
+              else if (currentUser.address && currentUser.address.geolocation)
+                updateData.address.geolocation.long =
+                  currentUser.address.geolocation.long;
+            } else if (currentUser.address && currentUser.address.geolocation) {
+              // Copy existing geolocation if not provided in request
+              updateData.address.geolocation = currentUser.address.geolocation;
+            }
+          }
+
+          // Now perform the update with our carefully constructed object
+          return User.findOneAndUpdate({ id }, updateData, { new: true });
+        })
+        .then((updatedUser) => {
+          if (updatedUser) {
+            res.json(updatedUser);
+          }
+          // If no user was found, we already sent a 404 response
+        })
+        .catch((err) => {
+          console.log(err);
+          res.status(500).json({
             status: "error",
-            message: "User not found",
+            message: "Failed to update user",
+            error: err.message,
           });
-        }
-        res.json(user);
-      })
-      .catch((err) => {
-        console.log(err);
-        res.status(500).json({
-          status: "error",
-          message: "Failed to update user",
-          error: err.message,
         });
-      });
+    } else {
+      // If name fields weren't provided, we can do a simpler update
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({
+          status: "error",
+          message: "No fields to update were provided",
+        });
+      }
+
+      User.findOneAndUpdate({ id }, updateData, { new: true })
+        .then((user) => {
+          if (!user) {
+            return res.status(404).json({
+              status: "error",
+              message: "User not found",
+            });
+          }
+          res.json(user);
+        })
+        .catch((err) => {
+          console.log(err);
+          res.status(500).json({
+            status: "error",
+            message: "Failed to update user",
+            error: err.message,
+          });
+        });
+    }
   }
 };
 
