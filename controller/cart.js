@@ -175,9 +175,7 @@ module.exports.checkout = async (req, res) => {
     }
 
     // Find the cart
-    const cart = await Cart.findOne({ id: cartId }).select(
-      "-_id -products._id"
-    );
+    const cart = await Cart.findOne({ id: cartId });
 
     if (!cart) {
       return res.status(404).json({
@@ -231,6 +229,7 @@ module.exports.checkout = async (req, res) => {
       products: detailedProducts,
       total: totalAmount,
       date: new Date(),
+      status: "Processing",
       shippingAddress: shippingAddress || {
         address: "Default Address",
         city: "Default City",
@@ -244,7 +243,7 @@ module.exports.checkout = async (req, res) => {
     // Save the order
     const savedOrder = await order.save();
 
-    // Empty the cart after checkout (optional)
+    // Empty the cart after checkout
     cart.products = [];
     await cart.save();
 
