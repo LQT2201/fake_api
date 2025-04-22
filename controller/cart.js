@@ -63,7 +63,7 @@ module.exports.addCart = (req, res) => {
       })
       .then(() => {
         const cart = new Cart({
-          id: cartCount + 1,
+          id: Date.now().toString(),
           userId: req.body.userId,
           date: req.body.date || new Date(),
           products: req.body.products,
@@ -165,6 +165,13 @@ module.exports.checkout = async (req, res) => {
     const cartId = parseInt(req.params.id);
     const { shippingAddress, paymentMethod } = req.body;
 
+    if (!cartId) {
+      return res.status(400).json({
+        status: "error",
+        message: "Cart ID is required for checkout",
+      });
+    }
+
     // Find the cart
     const cart = await Cart.findOne({ id: cartId }).select(
       "-_id -products._id"
@@ -174,6 +181,14 @@ module.exports.checkout = async (req, res) => {
       return res.status(404).json({
         status: "error",
         message: "Cart not found",
+      });
+    }
+
+    // Check if cart has products
+    if (!cart.products || cart.products.length === 0) {
+      return res.status(400).json({
+        status: "error",
+        message: "Cannot checkout with empty cart",
       });
     }
 
@@ -204,16 +219,18 @@ module.exports.checkout = async (req, res) => {
       });
     }
 
-    // Count existing orders to generate a new ID
-    const orderCount = await Order.countDocuments();
+    // Generate a unique order ID
+    const orderId = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
     // Create a new order
     const order = new Order({
-      id: orderCount + 1,
+      id: orderId,
       userId: cart.userId,
       cartId: cart.id,
       products: detailedProducts,
-      totalAmount,
+      total: totalAmount,
+      date: new Date(),
+      status: "processing",
       shippingAddress: shippingAddress || {
         address: "Default Address",
         city: "Default City",
@@ -221,12 +238,15 @@ module.exports.checkout = async (req, res) => {
         country: "Default Country",
       },
       paymentMethod: paymentMethod || "Cash on Delivery",
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      shippingFee: totalAmount > 100 ? 0 : 10, // Free shipping for orders over $100
     });
 
     // Save the order
     const savedOrder = await order.save();
+
+    // Empty the cart after checkout (optional)
+    cart.products = [];
+    await cart.save();
 
     // Respond with the created order
     res.status(201).json({
