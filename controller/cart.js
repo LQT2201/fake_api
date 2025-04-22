@@ -233,7 +233,7 @@ module.exports.checkout = async (req, res) => {
       shippingAddress: shippingAddress || {
         address: "Default Address",
         city: "Default City",
-        postalCode: "12345",
+        postalCode: "123456",
         country: "Default Country",
       },
       paymentMethod: paymentMethod || "Cash on Delivery",
