@@ -56,38 +56,40 @@ module.exports.addCart = (req, res) => {
       message: "data is undefined",
     });
   } else {
-    let cartCount = 0;
-    Cart.find()
-      .countDocuments(function (err, count) {
-        cartCount = count;
-      })
-      .then(() => {
-        const cart = new Cart({
-          id: Date.now().toString(),
-          userId: req.body.userId,
-          date: req.body.date || new Date(),
-          products: req.body.products,
-        });
-        cart
-          .save()
-          .then((cart) => res.json(cart))
-          .catch((err) => {
-            console.log(err);
-            res.status(500).json({
-              status: "error",
-              message: "Failed to save cart to database",
-              error: err.message,
-            });
-          });
-      })
-      .catch((err) => {
-        console.log(err);
-        res.status(500).json({
-          status: "error",
-          message: "Error counting carts",
-          error: err.message,
-        });
+    try {
+      // Generate a unique cart ID
+      const cartId = Date.now().toString();
+
+      // Create a new cart with the generated ID
+      const cart = new Cart({
+        id: cartId,
+        userId: req.body.userId,
+        date: req.body.date || new Date(),
+        products: req.body.products || [],
       });
+
+      cart
+        .save()
+        .then((cart) => {
+          console.log("New cart created with ID:", cartId);
+          res.json(cart);
+        })
+        .catch((err) => {
+          console.log("Error saving cart:", err);
+          res.status(500).json({
+            status: "error",
+            message: "Failed to save cart to database",
+            error: err.message,
+          });
+        });
+    } catch (err) {
+      console.log("Exception in addCart:", err);
+      res.status(500).json({
+        status: "error",
+        message: "Error creating cart",
+        error: err.message,
+      });
+    }
   }
 };
 
@@ -219,12 +221,9 @@ module.exports.checkout = async (req, res) => {
       });
     }
 
-    // Generate a unique order ID
-    const orderId = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-
     // Create a new order
     const order = new Order({
-      id: orderId,
+      id: Date.now().toString(),
       userId: cart.userId,
       cartId: cart.id,
       products: detailedProducts,
