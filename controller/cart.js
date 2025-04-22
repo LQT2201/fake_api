@@ -229,7 +229,6 @@ module.exports.checkout = async (req, res) => {
       products: detailedProducts,
       total: totalAmount,
       date: new Date(),
-      status: "processing",
       shippingAddress: shippingAddress || {
         address: "Default Address",
         city: "Default City",
