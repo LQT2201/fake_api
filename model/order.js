@@ -34,7 +34,6 @@ const orderSchema = new schema({
   ],
   totalAmount: {
     type: Number,
-    required: true,
   },
   shippingAddress: {
     address: String,

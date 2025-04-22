@@ -221,6 +221,8 @@ module.exports.checkout = async (req, res) => {
       });
     }
 
+    console.log(totalAmount, detailedProducts);
+
     // Create a new order
     const order = new Order({
       id: Date.now().toString(),
